@@ -1,0 +1,37 @@
+{
+  "name": "p2plex-gossip",
+  "version": "1.0.0",
+  "description": "Create a secure swarm of peers to gossip over P2Plex",
+  "main": "index.js",
+  "scripts": {
+    "build": "protocol-buffers schema.proto -o messages.js",
+    "test": "node test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RangerMauve/p2plex-gossip.git"
+  },
+  "keywords": [
+    "p2p",
+    "swarm",
+    "gossip",
+    "flood"
+  ],
+  "author": "rangermauve <ranger@mauve.moe> (https://mauve.moe/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/RangerMauve/p2plex-gossip/issues"
+  },
+  "homepage": "https://github.com/RangerMauve/p2plex-gossip#readme",
+  "dependencies": {
+    "abstract-flood": "^1.0.0",
+    "length-prefixed-stream": "^2.0.0",
+    "protocol-buffers-encodings": "^1.1.1",
+    "sodium-universal": "^3.0.2"
+  },
+  "devDependencies": {
+    "p2plex": "^1.4.0",
+    "protocol-buffers": "^4.2.0",
+    "tape": "^5.0.1"
+  }
+}
