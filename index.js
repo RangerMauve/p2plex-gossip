@@ -20,9 +20,18 @@ const { Message } = require('./messages')
 const NONCE_INDEX_BYTES = 4
 
 class P2PlexGossip extends EventEmitter {
+  static async create (opts) {
+    const gossip = new P2PlexGossip(opts)
+
+    await gossip.init()
+
+    return gossip
+  }
+
   constructor ({
     swarm,
     peers,
+    id,
     nonce = Buffer.from([]),
 
     ttl,
@@ -41,6 +50,7 @@ class P2PlexGossip extends EventEmitter {
     this.nonce = nonce
     this.keyPair = keyPair
     this.nonceIndex = 0
+    this.id = id || keyPair.publicKey
 
     this.connections = new Set()
     this.channel = null
@@ -84,21 +94,23 @@ class P2PlexGossip extends EventEmitter {
 
     this.channel = await this.generateChannel()
 
-    this.flood.join(this.channel, { announce: true, lookup: true })
+    this.swarm.join(this.channel, { announce: true, lookup: true })
+
+    await EventEmitter.once(this, 'connection')
   }
 
   async generateChannel () {
     const peerKeys = [...this.peers.keys()].map((key) => Buffer.from(key, 'hex'))
-    const bytes = Buffer.concat(this.nonce, ...peerKeys)
+    const bytes = Buffer.concat([this.nonce, ...peerKeys])
 
-    return this.hashBytes(bytes)
+    return this._hashBytes(bytes)
   }
 
   async sign (data) {
     const indexNonce = Buffer.alloc(NONCE_INDEX_BYTES)
     indexNonce.writeInt32BE(this.nonceIndex++)
-    const nonce = Buffer.concat(indexNonce, this.nonce)
-    const toSign = Buffer.concat(data, nonce)
+    const nonce = Buffer.concat([indexNonce, this.nonce])
+    const toSign = Buffer.concat([data, nonce])
 
     const signature = await this._sign(toSign)
     const from = this.id
@@ -111,13 +123,12 @@ class P2PlexGossip extends EventEmitter {
 
     if (!isValidNonce) return false
 
-    const toSign = Buffer.concat(data, nonce)
-    return this.verify(from, data, toSign)
+    const toSign = Buffer.concat([data, nonce])
+    return this._verify(from, toSign, signature)
   }
 
   async _handleMessage (message) {
     const { from, nonce, signature, data } = Message.decode(message)
-
     const isValid = await this.verify(from, data, nonce, signature)
 
     if (isValid) {
@@ -142,14 +153,16 @@ class P2PlexGossip extends EventEmitter {
 
     decode.on('data', (data) => this._handleFromPeer(data))
 
-    this.connections.add(stream)
+    this.connections.add(encode)
 
     stream.once('end', () => {
-      this.connections.delete(stream)
+      this.connections.delete(encode)
     })
 
     stream.pipe(decode)
     encode.pipe(stream)
+
+    this.emit('connection', peer, stream)
   }
 
   isValidNonce (nonce) {

@@ -33,6 +33,10 @@ const gossip = await Gossip.create({
 	// Map of `remotePublicKey` to `signingPublicKey`
 	peers,
 
+	// Your ID in the list
+	// If not provided `keyPair.publicKey` will be used
+	id,
+
 	// Pass a nonce to prevent replay attacks
 	// Must be a buffer with unique bytes
 	nonce,
